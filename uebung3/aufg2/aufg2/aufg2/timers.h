@@ -13,6 +13,7 @@ typedef struct Timer
 {
 	TimerType timer;
 	uint32_t time; //time in µs
+	uint64_t initTime;
 	void(*callback)();
 	uint8_t timerActive; //0 = inactive, 1 = init, 2 = active
 } Timer;
@@ -23,13 +24,13 @@ void declareTimer(TimerType, int, void(*callback)());
 void startTimer(TimerType);
 void cancelTimer(TimerType);
 
-
+uint64_t counter = 0;
 /*-----------------------TIMER-----------------*/
 
 void timerInit(){
-	TCNT0 = 6; //timer
+	TCNT1 = 0; //timer init value
 	TCCR1B &= ~((1<<CS02)|(1<<CS01)|(1<<CS00));
-	TCCR1B |= (1<<CS01);
+	TCCR1B |= (1<<CS01); //prescaler8, alle 0,5µs tick
 	TIMSK1 |= (1<<TOIE1);
 	sei();
 }
@@ -40,7 +41,7 @@ void declareTimer(TimerType t, int time, void(*callback)())
 		if(timers[i].timerActive == 0){
 			timers[i].timer = t;
 			timers[i].timerActive = 1;
-			timers[i].ev = ev;
+			timers[i].callback = callback;
 			timers[i].initTime = 0;
 			timers[i].time = time;
 			break;
@@ -73,19 +74,20 @@ void cancelTimer(TimerType t)
 }
 
 ISR(TIMER0_OVF_vect){
-	static uint16_t counter = 0;
-	TCNT0 = 6;
-	counter++;
-	if (counter==20){
+	static uint8_t isrCounter = 0;
+	TCNT1 = 0;
+	isrCounter++;
+	if (isrCounter%2==0){ //alle 1µs
 		for(int i = 0; i < timerCount; i++)
 		{
-			if(((GetSysTime() - timers[i].initTime) >= timers[i].time) && timers[i].timerActive == 2)
+			if(((counter - timers[i].initTime) >= timers[i].time) && timers[i].timerActive == 2)
 			{
 				setEvent(timers[i].ev);
 				cancelTimer(timers[i].timer);
 			}
 		}
-		counter=0;
+		isrCounter=0;
+		counter++;
 	}
 }
 

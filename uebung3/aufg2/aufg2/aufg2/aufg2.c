@@ -14,37 +14,15 @@
 #include <avr/interrupt.h>
 #include <stdint.h>
 #include "events.h"
+#include "timers.h"
 
 #define EVENT_0 0x01
 #define EVENT_1 0x02
-
-#define timerCount 5
-#define Timer0 (uint8_t)0
-#define Timer1 (uint8_t)1
-#define Timer2 (uint8_t)2
-#define Timer3 (uint8_t)3
-#define Timer4 (uint8_t)4
 
 volatile uint8_t running = 1;
 volatile uint8_t counter = 7;
 volatile uint8_t startValue = 0;
 
-typedef uint8_t EventType;
-typedef uint8_t TimerType;
-typedef struct Timer
-{
-	TimerType timer;
-	uint32_t initTime;
-	int time;
-	EventType ev;
-	uint8_t timerActive; //0 = inactive, 1 = init, 2 = active
-} Timer;
-
-volatile Timer timers[timerCount] = {0};
-
-void setTimer(TimerType, int, EventType);
-void startTimer(TimerType);
-void cancelTimer(TimerType);
 
 
 uint8_t setBit(uint8_t value, uint8_t index, uint8_t var)
@@ -177,46 +155,6 @@ int main(void)
 			prevA4Val = a4Val;
 		}
 		_delay_ms(10);
-	}
-}
-
-/*-----------------------TIMER-----------------*/
-
-void setTimer(TimerType t, int time, EventType ev)
-{
-	for(int i = 0; i < timerCount; i++){
-		if(timers[i].timerActive == 0){
-			timers[i].timer = t;
-			timers[i].timerActive = 1;
-			timers[i].ev = ev;
-			timers[i].initTime = 0;
-			timers[i].time = time;
-			break;
-		}
-	}
-}
-
-void startTimer(TimerType t)
-{
-	for(int i = 0; i < timerCount; i++)
-	{
-		if(timers[i].timer == t)
-		{
-			timers[i].timerActive = 2;
-			timers[i].initTime = GetSysTime();
-			break;
-		}
-	}
-}
-
-void cancelTimer(TimerType t)
-{
-	for(int i = 0; i < timerCount; i++)
-	{
-		if(timers[i].timer == t)
-		{
-			timers[i].timerActive = 0;
-		}
 	}
 }
 
