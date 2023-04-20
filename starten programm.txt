@@ -1,0 +1,7 @@
+Koffer 8
+
+Import Export settings
+-unteren Button anklicken (ohne Backuup)
+-Dieser PC Programme (x86)
+Atmel
+-vssettings
