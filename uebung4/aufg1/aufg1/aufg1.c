@@ -5,13 +5,6 @@
  *  Author: scl36281
  */ 
 
-/*
- * Usart_Test.c
- *
- * Created: 07.03.2020 23:16:48
- * Author : mea39511
- */ 
-
 #define F_CPU 16000000UL
 
 #define BAUDRATE 9600
@@ -19,24 +12,30 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>
 
-volatile  char arr
-[32] = {-1};
-volatile uint8_t readIndex, writeIndex;
+#define BUFFERSIZE 32
 
-#define BUFFERSIZE 32; 
+volatile int8_t readBuffer[BUFFERSIZE]; 
+volatile uint8_t bufferLength = 0;
+volatile uint8_t readIndex = 0, writeIndex = 0;
 
-void initchar(){
-	for(int i = 0; i < sizeof(arr); i++){
-		arr[i] = -1;
+int8_t readFromReadBuffer(){
+	if(bufferLength > 0){
+		int8_t val = readBuffer[readIndex];
+		readBuffer[readIndex] = -1;
+		readIndex = (readIndex + 1) % BUFFERSIZE;
+		bufferLength--;
+		return val;
 	}
+	return -1;
 }
 
-uint8_t readFromReadBuffer(uint8_t * buffer, uint8_t index){
-	
-}
-uint8_t writeFromWriteBuffer(uint8_t * buffer, uint8_t index, uint8_t val){
-	
+void writeToReadBuffer(int8_t val){
+	readBuffer[writeIndex] = val;
+	writeIndex = (writeIndex + 1) % BUFFERSIZE;
+	bufferLength++;
+	return;
 }
 
 uint8_t getBit(uint8_t var, uint8_t index)
@@ -62,14 +61,13 @@ unsigned char USART_Receive(){
 	return UDR0;
 }
 
-ISR(UDR0){
-	
-	if(!(getBit(UCSR0A,FE0 ) || getBit(UCSR0A, DOR0) || getBit(UCSR0A, UPE0))){
-		uint8_t temp = UDR0;
-		w
-		
+ISR(USART_RX_vect){
+	if(!(getBit(UCSR0A, FE0)||getBit(UCSR0A, DOR0)||getBit(UCSR0A, UPE0))){
+		uint8_t UDR0_temp = UDR0;
+		writeToReadBuffer(UDR0_temp);
 	}
 }
+
 int main(void)
 {
 	UCSR0B |= (1<<RXCIE0);
@@ -78,24 +76,32 @@ int main(void)
 	int g = 0;
 	const char meldung[]="Hier ATmega. Wer da?";
 	USART_Init();
-	for(int f=0;meldung[f]!='\0';f++)
+	for(int f=0;meldung[f]!='\0';f++){
 		USART_Transmit(meldung[f]);
+	}
+	int8_t readValue = -1;
     while (1) 
     {
-		name[g] = USART_Receive();
-		if (name[g]!=0x0d){
-			USART_Transmit(name[g]);
-			g++;
-			continue;	
+		//name[g] = USART_Receive();
+		//if (name[g]!=0x0d){
+			//USART_Transmit(name[g]);
+			//g++;
+			//continue;	
+		//}
+		//USART_Transmit(0x0d);
+		//USART_Transmit('H');
+		//USART_Transmit('i');
+		//USART_Transmit(' ');
+		//for(int f=0;f<g;f++){
+			//USART_Transmit(name[f]-32);
+		//}
+		//g = 0;
+		//USART_Transmit(0x0d);	
+		readValue = readFromReadBuffer();
+		if(readValue > -1){
+			USART_Transmit(readValue);
 		}
-		USART_Transmit(0x0d);
-		USART_Transmit('H');
-		USART_Transmit('i');
-		USART_Transmit(' ');
-		for(int f=0;f<g;f++)
-			USART_Transmit(name[f]-32);
-		g = 0;
-		USART_Transmit(0x0d);
+		_delay_ms(300);
     }
 }
 
